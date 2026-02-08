@@ -141,6 +141,8 @@ vite.config.ts.timestamp-*
 .vite/
 
 users/*
+!users/.gitkeep
+
 start.bat
 temp.txt
 

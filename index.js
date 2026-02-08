@@ -19,7 +19,16 @@ app.use(corsMiddleware);
 const port = process.env.port || 3456
 
 app.post("/api/save-guild-user-list", (req, resp) => {
-  filename = "users-" + Date.now() + ".json"
+
+  const now = new Date();
+  const formattedDate = now.toISOString()
+    .replace('T', '_')
+    .replace(/\..+/, '')
+    .replace(/:/g, '');
+
+  const filename = "users-" + formattedDate + ".json";
+
+  // filename = "users-" + Date.now() + ".json"
   console.log("Start writing: " + filename)
 
   fs.writeFile("users/" + filename, JSON.stringify(req.body),
@@ -53,21 +62,23 @@ app.get("/api/guild-user-summary", (req, resp) => {
   let users = new Map()
 
   fs.readdirSync("users/").forEach(file => {
-    var obj = JSON.parse(fs.readFileSync("users/" + file, 'utf8'))
-    
-    obj.forEach(el => {
 
-      if (users.get(el.id) === undefined) {
-        users.set(el.id, new Map())
-      }
+    if (file.startsWith("users")) {
+      var obj = JSON.parse(fs.readFileSync("users/" + file, 'utf8'))
+      
+      obj.forEach(el => {
 
-      let userObj = users.get(el.id)
-      let datestr = el.datetime.slice(0, 10);
-      if (userObj.get(datestr) === undefined) {
-        userObj.set(datestr, {"online24h": el.online24h})
-      }
-    })
+        if (users.get(el.id) === undefined) {
+          users.set(el.id, new Map())
+        }
 
+        let userObj = users.get(el.id)
+        let datestr = el.datetime.slice(0, 10);
+        if (userObj.get(datestr) === undefined) {
+          userObj.set(datestr, {"online24h": el.online24h})
+        }
+      })
+    }
   })
 
   resp.send(mapToObject(users))
