@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Settlers App</title>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+
+<style>
+    body {
+        font-family: system-ui, sans-serif;
+        padding: 20px;
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        padding: 4px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    th {
+        font-weight: 600;
+        color: #555;
+    }
+    th.day {
+    width: 14px;
+    height: 20px;
+    padding: 0;
+    font-size: 9px;
+    line-height: 1;
+    vertical-align: middle;
+    }
+
+    .th-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    }
+    .user {
+        text-align: right;
+        padding-right: 10px;
+        white-space: nowrap;
+    }
+
+    .cell {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: #b0b0b0;
+        /* brak daty = szary */
+    }
+
+    .cell.online {
+        background: #40c463;
+        /* online = zielony */
+    }
+
+    .cell.offline {
+        background: #e5533d;
+        /* offline = czerwony */
+    }
+
+    .cell:hover {
+        outline: 1px solid #555;
+        cursor: pointer;
+    }
+</style>
+
+
+
+<script>
+$(document).ready(function(){
+
+    fetch("/api/guild-user-summary", {method: "GET"})
+    .then(res => {
+        if (!res.ok) throw Error(res.statusText);
+        return res.json();
+    })
+    .then(data => {
+        const days = [...new Set(
+        Object.values(data).flatMap(user => Object.keys(user))
+        )].sort().reverse();
+
+        const table = document.getElementById('activity');
+
+        const header = document.createElement('tr');
+        header.innerHTML =
+        `<th></th>` +
+        days.map(d => {
+            const [, month, day] = d.split('-');
+            return `
+            <th class="day" title="${d}">
+                <div class="th-date">
+                <div>${day}</div>
+                <div>${month}</div>
+                </div>
+            </th>
+            `;
+        }).join('');
+        table.appendChild(header);
+
+        Object.entries(data).sort(([a], [b]) => a.localeCompare(b)).forEach(([user, activity]) => {
+        const row = document.createElement('tr');
+
+        row.innerHTML = `<td class="user">${user}</td>` +
+            days.map(day => {
+            const entry = activity[day];
+
+            if (!entry) {
+                return `
+                <td>
+                    <div class="cell" title="${user} • ${day} • brak danych"></div>
+                </td>
+                `;
+            }
+
+            return `
+                <td>
+                <div
+                    class="cell ${entry.online24h ? 'online' : 'offline'}"
+                    title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
+                ></div>
+                </td>
+            `;
+            }).join('');
+
+        table.appendChild(row);
+        });
+
+    })
+    .catch(error => console.log(error));
+})
+ 
+
+</script>
+</head>
+<body>
+    <h3>Guild user activity list</h3>
+    <table id="activity"></table> 
+</body>
+</html>
