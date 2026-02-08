@@ -1,4 +1,4 @@
-"# Settlers App" 
+# Settlers App
 
 This is a simple tool for settlers online game.
 For now it only tracks guild members 24h activity.
