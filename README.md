@@ -8,6 +8,12 @@ Install
 Copy client/settlers_app.js to /tso_portable/userscripts folder.  
 Check if it appears in client - Tools/Update  
 
+Install node.js  
+Install dependencies:  
+- npm install nodemon  
+- npm install express  
+- npm install cors  
+
 Usage
 ---
 First run a small http server:  
