@@ -70,12 +70,35 @@
         outline: 1px solid #555;
         cursor: pointer;
     }
+
+    .percentage {
+        margin-left: 6px;
+        font-size: 0.85em;
+        color: #777;
+    }
 </style>
 
 
 
 <script>
 $(document).ready(function(){
+
+
+    function getActivityPercentage(activity, days) {
+        let online = 0;
+        let total = 0;
+
+        days.forEach(day => {
+            if (!activity[day]) return; // ignore missing days
+
+            total++;
+            if (activity[day].online24h) {
+                online++;
+            }
+        });
+
+        return total === 0 ? 0 : Math.round((online / total) * 100);
+    }
 
     fetch("/api/guild-user-summary", {method: "GET"})
     .then(res => {
@@ -105,33 +128,45 @@ $(document).ready(function(){
         }).join('');
         table.appendChild(header);
 
-        Object.entries(data).sort(([a], [b]) => a.localeCompare(b)).forEach(([user, activity]) => {
+        Object.entries(data)
+    .map(([user, activity]) => ({
+        user,
+        activity,
+        percentage: getActivityPercentage(activity, days)
+    }))
+    .sort((a, b) => b.percentage - a.percentage)
+    .forEach(({ user, activity, percentage }) => {
         const row = document.createElement('tr');
 
-        row.innerHTML = `<td class="user">${user}</td>` +
-            days.map(day => {
+        row.innerHTML = `
+            <td class="user">
+                ${user}
+                <span class="percentage">${percentage}%</span>
+            </td>
+        ` +
+        days.map(day => {
             const entry = activity[day];
 
             if (!entry) {
                 return `
-                <td>
-                    <div class="cell" title="${user} • ${day} • brak danych"></div>
-                </td>
+                    <td>
+                        <div class="cell" title="${user} • ${day} • brak danych"></div>
+                    </td>
                 `;
             }
 
             return `
                 <td>
-                <div
-                    class="cell ${entry.online24h ? 'online' : 'offline'}"
-                    title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
-                ></div>
+                    <div
+                        class="cell ${entry.online24h ? 'online' : 'offline'}"
+                        title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
+                    ></div>
                 </td>
             `;
-            }).join('');
+        }).join('');
 
         table.appendChild(row);
-        });
+    });
 
     })
     .catch(error => console.log(error));
@@ -141,7 +176,7 @@ $(document).ready(function(){
 </script>
 </head>
 <body>
-    <h3>Guild user activity list</h3>
+    <h3>Guild members activity list</h3>
     <table id="activity"></table> 
 </body>
 </html>
