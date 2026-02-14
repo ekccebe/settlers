@@ -10,14 +10,13 @@ Check if it appears in client - Tools/Update
 
 Install node.js  
 Install dependencies:  
-- npm install nodemon  
 - npm install express  
 - npm install cors  
 
 Usage
 ---
 First run a small http server:  
-nodemon -e ./index.js  
+node index.js  
 
 It should display:  
 Settlers app started at port: 3456  
