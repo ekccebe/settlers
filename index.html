@@ -128,45 +128,66 @@ $(document).ready(function(){
         }).join('');
         table.appendChild(header);
 
-        Object.entries(data)
-    .map(([user, activity]) => ({
-        user,
-        activity,
-        percentage: getActivityPercentage(activity, days)
-    }))
-    .sort((a, b) => b.percentage - a.percentage)
-    .forEach(({ user, activity, percentage }) => {
-        const row = document.createElement('tr');
 
-        row.innerHTML = `
-            <td class="user">
-                ${user}
-                <span class="percentage">${percentage}%</span>
-            </td>
-        ` +
-        days.map(day => {
-            const entry = activity[day];
+        const lastDay = days[0];
 
-            if (!entry) {
-                return `
-                    <td>
-                        <div class="cell" title="${user} • ${day} • brak danych"></div>
+        const users = Object.entries(data)
+        .map(([user, activity]) => ({
+            user,
+            activity,
+            percentage: getActivityPercentage(activity, days),
+            active: !!activity[lastDay] // true if present on last day
+        }))
+        .sort((a, b) => a.percentage - b.percentage);
+
+        const activeUsers = users.filter(u => u.active);
+        const formerUsers = users.filter(u => !u.active);
+
+        function renderRows(list, title) {
+
+            const sectionHeader = document.createElement('tr');
+            sectionHeader.innerHTML = `
+                <td colspan="${days.length + 1}" style="text-align:left;font-weight:bold;padding-top:10px">
+                    ${title}
+                </td>`;
+            if (title !== "") table.appendChild(sectionHeader);
+
+            list.forEach(({ user, activity, percentage }) => {
+
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td class="user">
+                        ${user}
+                        <span class="percentage">${percentage}%</span>
                     </td>
-                `;
-            }
+                ` +
+                days.map(day => {
 
-            return `
-                <td>
-                    <div
-                        class="cell ${entry.online24h ? 'online' : 'offline'}"
-                        title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
-                    ></div>
-                </td>
-            `;
-        }).join('');
+                    const entry = activity[day];
 
-        table.appendChild(row);
-    });
+                    if (!entry) {
+                        return `
+                            <td>
+                                <div class="cell" title="${user} • ${day} • no data"></div>
+                            </td>`;
+                    }
+
+                    return `
+                        <td>
+                            <div
+                                class="cell ${entry.online24h ? 'online' : 'offline'}"
+                                title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
+                            ></div>
+                        </td>`;
+                }).join('');
+
+                table.appendChild(row);
+            });
+        }
+
+        renderRows(activeUsers, "");
+        renderRows(formerUsers, "Players no longer in guild");
 
     })
     .catch(error => console.log(error));

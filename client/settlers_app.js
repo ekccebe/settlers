@@ -19,7 +19,7 @@ function ExampleMenuHandler(event)
 function ExampleMakeModal()
 {
 
-  var out = '<div class="container-fluid"><H3>Saving guild member list</H3>';
+  var out = '<div class="container-fluid"><H3>Saving guild member list. Done!</H3>';
   var guild = swmmo.application.mGameInterface.GetCurrentPlayerGuild();
   var guild_users = []
   const datetime = new Date().toISOString()

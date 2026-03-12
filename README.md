@@ -31,4 +31,4 @@ File written successfully
 
 Created a simple UI to show guild members with their daily activity. Open this link in a browser:  
 http://localhost:3456/  
-(or other port, it will be shown in server's console on startup)  
+

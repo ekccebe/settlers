@@ -76,6 +76,11 @@ app.get("/api/guild-user-summary", (req, resp) => {
         let datestr = el.datetime.slice(0, 10);
         if (userObj.get(datestr) === undefined) {
           userObj.set(datestr, {"online24h": el.online24h})
+        } else {
+          // overwrite if any file for a day has activity = true
+          if (el.online24h === true) {
+            userObj.set(datestr, {"online24h": el.online24h})
+          }
         }
       })
     }
