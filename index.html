@@ -53,17 +53,18 @@
         height: 14px;
         border-radius: 3px;
         background: #b0b0b0;
-        /* brak daty = szary */
+    }
+
+    td.empty-day {
+        background: #b0b0b0;
     }
 
     .cell.online {
         background: #40c463;
-        /* online = zielony */
     }
 
     .cell.offline {
         background: #e5533d;
-        /* offline = czerwony */
     }
 
     .cell:hover {
@@ -106,9 +107,25 @@ $(document).ready(function(){
         return res.json();
     })
     .then(data => {
-        const days = [...new Set(
-        Object.values(data).flatMap(user => Object.keys(user))
-        )].sort().reverse();
+        const allDates = [...new Set(
+            Object.values(data).flatMap(user => Object.keys(user))
+        )].sort();
+
+        const minDate = new Date(allDates[0]);
+        const maxDate = new Date(allDates[allDates.length - 1]);
+
+        const days = [];
+        let current = new Date(maxDate);
+
+        while (current >= minDate) {
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+
+            days.push(`${y}-${m}-${d}`);
+
+            current.setDate(current.getDate() - 1);
+        }
 
         const table = document.getElementById('activity');
 
@@ -166,15 +183,17 @@ $(document).ready(function(){
 
                     const entry = activity[day];
 
+                    const isEmptyDay = !Object.values(data).some(user => user[day]);
+
                     if (!entry) {
                         return `
-                            <td>
+                            <td class="${isEmptyDay ? 'empty-day' : ''}">
                                 <div class="cell" title="${user} • ${day} • no data"></div>
                             </td>`;
                     }
 
                     return `
-                        <td>
+                        <td class="${isEmptyDay ? 'empty-day' : ''}">
                             <div
                                 class="cell ${entry.online24h ? 'online' : 'offline'}"
                                 title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
