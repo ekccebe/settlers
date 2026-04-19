@@ -56,7 +56,7 @@
     }
 
     td.empty-day {
-        background: #b0b0b0;
+        background: #8aa8f2;
     }
 
     .cell.online {
@@ -182,18 +182,22 @@ $(document).ready(function(){
                 days.map(day => {
 
                     const entry = activity[day];
-
                     const isEmptyDay = !Object.values(data).some(user => user[day]);
+
+                    // 👉 jeśli to pusty dzień — zwróć pustą komórkę
+                    if (isEmptyDay) {
+                        return `<td class="empty-day"></td>`;
+                    }
 
                     if (!entry) {
                         return `
-                            <td class="${isEmptyDay ? 'empty-day' : ''}">
+                            <td>
                                 <div class="cell" title="${user} • ${day} • no data"></div>
                             </td>`;
                     }
 
                     return `
-                        <td class="${isEmptyDay ? 'empty-day' : ''}">
+                        <td>
                             <div
                                 class="cell ${entry.online24h ? 'online' : 'offline'}"
                                 title="${user} • ${day} • ${entry.online24h ? 'online' : 'offline'}"
