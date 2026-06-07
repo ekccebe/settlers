@@ -77,6 +77,24 @@
         font-size: 0.85em;
         color: #777;
     }
+
+    .menu {
+        margin-bottom: 20px;
+    }
+
+    .menu button {
+        padding: 8px 16px;
+        margin-right: 5px;
+        cursor: pointer;
+    }
+
+    #activity-last-seen td:first-child,
+    #activity-last-seen th:first-child {
+        text-align: left;
+    }
+    #activity-last-seen th {
+        background-color:#EEE;
+    }
 </style>
 
 
@@ -212,15 +230,94 @@ $(document).ready(function(){
         renderRows(activeUsers, "");
         renderRows(formerUsers, "Players no longer in guild");
 
+        // Last Seen table
+
+        const lastSeenTable = document.getElementById('activity-last-seen');
+
+        const lastSeenUsers = activeUsers.map(({ user, activity }) => {
+
+            let lastOnlineDate = null;
+
+            for (const day of days) { 
+                const entry = activity[day];
+
+                if (entry && entry.online24h) {
+                    lastOnlineDate = day;
+                    break;
+                }
+            }
+
+            let daysSinceSeen;
+
+            if (!lastOnlineDate) {
+                daysSinceSeen = 9999; 
+            } else {
+                const latestDate = new Date(days[0]);
+                const seenDate = new Date(lastOnlineDate);
+
+                daysSinceSeen = Math.floor(
+                    (latestDate - seenDate) / (1000 * 60 * 60 * 24)
+                );
+            }
+
+            return {
+                user,
+                daysSinceSeen
+            };
+        })
+        .sort((a, b) => b.daysSinceSeen - a.daysSinceSeen);
+
+        // header
+        lastSeenTable.innerHTML = `
+            <tr>
+                <th>Player</th>
+                <th>Days since last seen</th>
+            </tr>
+        `;
+
+        // rows
+        lastSeenUsers.forEach(({ user, daysSinceSeen }) => {
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td>${user}</td>
+                <td>${daysSinceSeen}</td>
+            `;
+
+            lastSeenTable.appendChild(row);
+        });
+
+
     })
     .catch(error => console.log(error));
 })
  
+function showTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.style.display = 'none';
+    });
 
+    document.getElementById(tabName + '-tab').style.display = 'block';
+}
 </script>
 </head>
 <body>
-    <h3>Guild members activity list</h3>
-    <table id="activity"></table> 
+
+    <div class="menu">
+        <button onclick="showTab('activity')">Activity (table)</button>
+        <button onclick="showTab('stats')">Activity (last seen)</button>
+    </div>
+
+    <div id="activity-tab" class="tab">
+        <h3>Guild members activity - table</h3>
+        <table id="activity"></table>
+    </div>
+
+    <div id="stats-tab" class="tab" style="display:none">
+        <h3>Guild members activity - last seen</h3>
+        <table id="activity-last-seen"></table>
+    </div>
+
+
 </body>
 </html>
