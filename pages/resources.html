@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Angel Tool - Resources</title>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.css">
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+}
+
+h2 {
+    margin-bottom: 10px;
+}
+
+.info {
+    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+.info div {
+    margin-bottom: 4px;
+}
+
+div.dt-container {
+    width: 100%;
+}
+
+table.dataTable {
+    width: auto !important;
+    margin: 0 !important;
+    font-size: 13px;
+}
+
+table.dataTable th,
+table.dataTable td {
+    white-space: nowrap;
+}
+
+table.dataTable thead th > span.dt-column-order {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0 !important;
+}
+
+table.dataTable thead th .dt-column-order {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+td.center {
+    text-align: center;
+}
+
+.status-yes {
+    color: green;
+    font-weight: bold;
+}
+
+.status-no {
+    color: red;
+    font-weight: bold;
+}
+
+.menu {
+    margin-bottom: 20px;
+}
+
+.menu button {
+    padding: 8px 16px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+</style>
+
+<script>
+$(document).ready(function () {
+
+    fetch("/api/get-resource-list")
+        .then(response => {
+            if (!response.ok)
+                throw Error(response.statusText);
+
+            return response.json();
+        })
+        .then(data => {
+
+            $("#player").text(data.player +' (' + data.level + ')');
+            $("#datetime").text(
+                data.datetime.replace("T", " ").substring(0, 19)
+            );
+
+            const rows = [];
+
+            data.resources.forEach(resource => {
+
+                rows.push({
+                    name: resource.name,
+                    amount: resource.amount,
+                    maxLimit: resource.maxLimit,
+                    group: resource.group,
+                    isFull: resource.amount == resource.maxLimit
+                });
+
+            });
+
+            $("#resources").DataTable({
+
+                data: rows,
+
+                autoWidth: false,
+
+                scrollX: true,
+
+                paging: false,
+
+                columnDefs: [
+                    {
+                        targets: '_all',
+                        orderSequence: ['asc', 'desc']
+                    }
+                ],
+
+                layout: {
+                    topStart: 'search',
+                    topEnd: 'pageLength'
+                },
+
+                order: [
+                    [1, "asc"],
+                    [2, "desc"]
+                ],
+
+                columns: [
+
+                    {
+                        data: "name",
+                        title: "Name"
+                    },
+
+                    {
+                        data: "amount",
+                        title: "Amount"
+                    },
+
+                    {
+                        data: "maxLimit",
+                        title: "Limit"
+                    },
+
+                    {
+                        data: "group",
+                        title: "Group"
+                    },
+
+                    {
+                        data: "isFull",
+                        title: "Full",
+                        className: "center",
+                        render: function (data) {
+                            return data
+                                ? '<span class="status-yes">⚠️</span>'
+                                : '';
+                        }
+                    }
+
+                ]
+
+            });
+
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Cannot load data from API.");
+        });
+
+});
+</script>
+
+</head>
+
+<body>
+
+<div class="menu">
+    <button onclick="window.location.href='/'">Activity (table)</button>
+    <button onclick="window.location.href='/buildings'">Building list</button>
+    <button onclick="window.location.href='/resources'">Player resources</button>
+</div>
+
+<h2>Resources</h2>
+
+<div class="info">
+    <div><b>Player:</b> <span id="player"></span></div>
+    <div><b>Snapshot:</b> <span id="datetime"></span></div>
+</div>
+
+<table id="resources" class="display"></table>
+
+</body>
+</html>

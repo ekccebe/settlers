@@ -21,33 +21,73 @@ const port = process.env.port || 3456
 app.post("/api/save-guild-user-list", (req, resp) => {
 
   const now = new Date();
-  const formattedDate = now.toISOString()
-    .replace('T', '_')
-    .replace(/\..+/, '')
-    .replace(/:/g, '');
-
+  const formattedDate = getDateString();
   const filename = "users-" + formattedDate + ".json";
 
-  // filename = "users-" + Date.now() + ".json"
-  console.log("Start writing: " + filename)
-
+  console.log("Saving file: " + filename)
   fs.writeFile("users/" + filename, JSON.stringify(req.body),
   (err) => {
     if (err)
       console.log(err);
-    else {
-      console.log("File written successfully\n");
-    }
   });
 
   resp.send("Ok");
 
 });
 
-const htmlPath = path.join(__dirname + "/index.html")
-app.get("/", (req, resp) => {
-  resp.sendFile(htmlPath)
+app.post("/api/save-building-list", (req, resp) => {
+
+  const now = new Date();
+  const formattedDate = getDateString();
+  const filename = "buildings-" + formattedDate + ".json";
+
+  console.log("Saving file: " + filename)
+  fs.writeFile("island/" + filename, JSON.stringify(req.body),
+  (err) => {
+    if (err)
+      console.log(err);
+  });
+
+  resp.send("Ok");
+
 });
+
+app.post("/api/save-resource-list", (req, resp) => {
+
+  const now = new Date();
+  const formattedDate = getDateString();
+  const filename = "resources-" + formattedDate + ".json";
+
+  console.log("Saving file: " + filename)
+  fs.writeFile("island/" + filename, JSON.stringify(req.body),
+  (err) => {
+    if (err)
+      console.log(err);
+  });
+
+  resp.send("Ok");
+
+});
+
+app.get("/", (req, resp) => {
+  resp.sendFile(path.join(__dirname + "/pages/index.html"))
+});
+
+app.get("/buildings", (req, resp) => {
+  resp.sendFile(path.join(__dirname + "/pages/buildings.html"))
+});
+
+app.get("/resources", (req, resp) => {
+  resp.sendFile(path.join(__dirname + "/pages/resources.html"))
+});
+
+const getDateString = () => {
+  const now = new Date();
+  return formattedDate = now.toISOString()
+    .replace('T', '_')
+    .replace(/\..+/, '')
+    .replace(/:/g, '');
+};
 
 const mapToObject = (value) => {
   if (value instanceof Map) {
@@ -57,6 +97,7 @@ const mapToObject = (value) => {
   }
   return value;
 };
+
 
 app.get("/api/guild-user-summary", (req, resp) => {
   let users = new Map()
@@ -89,7 +130,41 @@ app.get("/api/guild-user-summary", (req, resp) => {
   resp.send(mapToObject(users))
 })
 
+app.get("/api/get-building-list", (req, resp) => {
+  const files = fs.readdirSync("island/")
+      .filter(file => file.startsWith("buildings"))
+      .sort()
+      .reverse();
+
+  if (files.length === 0) {
+      return resp.json([]);
+  }
+
+  const obj = JSON.parse(
+      fs.readFileSync("island/" + files[0], "utf8")
+  );
+
+  resp.json(obj);
+})
+
+app.get("/api/get-resource-list", (req, resp) => {
+  const files = fs.readdirSync("island/")
+      .filter(file => file.startsWith("resources"))
+      .sort()
+      .reverse();
+
+  if (files.length === 0) {
+      return resp.json([]);
+  }
+
+  const obj = JSON.parse(
+      fs.readFileSync("island/" + files[0], "utf8")
+  );
+
+  resp.json(obj);
+})
 
 var server = app.listen(port, function() {
-    console.log("Settlers app started at port: " + port)
+  console.log("Settlers app started at port: " + port)
+  console.log("---")
 })

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Settlers App - Buildings</title>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.css">
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+    background-color: #f4f4f9;
+}
+
+h2 {
+    margin-bottom: 10px;
+}
+
+.info {
+    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+.info div {
+    margin-bottom: 4px;
+}
+
+div.dt-container {
+    width: 100%;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+table.dataTable {
+    width: auto !important;
+    margin: 0 !important;
+    font-size: 13px;
+}
+
+table.dataTable th,
+table.dataTable td {
+    white-space: nowrap;
+}
+
+td.center {
+    text-align: center;
+}
+
+.status-yes {
+    color: green;
+    font-weight: bold;
+}
+
+.status-no {
+    color: red;
+    font-weight: bold;
+}
+
+/* Kontener mapy */
+.map-container {
+    margin-top: 30px;
+    position: relative;
+    background: #2b3a4a;
+    border-radius: 8px;
+    padding: 10px;
+    overflow: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    height: 600px;
+}
+
+#isoMap {
+    display: block;
+    margin: 0 auto;
+    cursor: crosshair;
+}
+
+/* Dymek nad mapą */
+.map-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+    line-height: 1.4;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border: 1px solid #555;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Buildings</h2>
+
+<div class="info">
+    <div><b>Player:</b> <span id="player"></span></div>
+    <div><b>Snapshot:</b> <span id="datetime"></span></div>
+    <div><b>Buildings:</b> <span id="count"></span></div>
+</div>
+
+<table id="buildings" class="display"></table>
+
+<div class="map-container">
+    <div id="mapTooltip" class="map-tooltip"></div>
+    <canvas id="isoMap"></canvas>
+</div>
+
+
+<script>
+const MAP_WIDTH = 89;
+const MAP_HEIGHT = 115; 
+const TILE_W = 32;       
+const TILE_H = 16;       
+
+function idToCoords(id, width = MAP_WIDTH) {
+    const x = id % width;
+    const y = Math.floor(id / width);
+    return { x, y };
+}
+
+const colorCache = {};
+function getBuildingColor(name) {
+    if (colorCache[name]) return colorCache[name];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    const color = "#" + "00000".substring(0, 6 - c.length) + c;
+    colorCache[name] = color;
+    return color;
+}
+
+$(document).ready(function () {
+
+    fetch("/api/get-building-list")
+        .then(response => {
+            if (!response.ok)
+                throw Error(response.statusText);
+            return response.json();
+        })
+        .then(data => {
+
+            $("#player").text(data.player +' (' + data.level + ')');
+            $("#datetime").text(data.datetime.replace("T", " ").substring(0, 19));
+            $("#count").text(data.buildings.length);
+
+            const rows = [];
+            const buildingGrid = Array(MAP_HEIGHT).fill(null).map(() => Array(MAP_WIDTH).fill(null));
+
+            data.buildings.forEach(building => {
+                const coords = idToCoords(building.grid);
+                const rowData = {
+                    grid: coords.x + "," + coords.y,
+                    building: building.locName,
+                    level: building.level,
+                    working: building.isWorking,
+                    upgrading: building.isUpgradeInProgress,
+                    buff: building.buff
+                };
+                rows.push(rowData);
+
+                if (coords.x < MAP_WIDTH && coords.y < MAP_HEIGHT) {
+                    const bColor = getBuildingColor(building.locName);
+                    const buildingInfo = { ...rowData, color: bColor };
+                    
+                    buildingGrid[coords.y][coords.x] = buildingInfo;
+                    if (coords.x + 1 < MAP_WIDTH) buildingGrid[coords.y][coords.x + 1] = buildingInfo;
+                    if (coords.y + 1 < MAP_HEIGHT) buildingGrid[coords.y + 1][coords.x] = buildingInfo;
+                    if (coords.x + 1 < MAP_WIDTH && coords.y + 1 < MAP_HEIGHT) buildingGrid[coords.y + 1][coords.x + 1] = buildingInfo;
+                }
+            });
+
+            $("#buildings").DataTable({
+                data: rows,
+                autoWidth: false,
+                scrollX: true,
+                paging: false,
+                columnDefs: [{ targets: '_all', orderSequence: ['asc', 'desc'] }],
+                layout: { topStart: 'search', topEnd: 'pageLength' },
+                order: [[1, "asc"], [2, "desc"]],
+                columns: [
+                    { data: "grid", title: "Grid" },
+                    { data: "building", title: "Building" },
+                    { data: "level", title: "Level" },
+                    { 
+                        data: "working", 
+                        title: "Working", 
+                        className: "center",
+                        render: data => data ? '<span class="status-yes">✔</span>' : '<span class="status-no">✖</span>'
+                    },
+                    { 
+                        data: "upgrading", 
+                        title: "Upgrading", 
+                        className: "center",
+                        render: data => data ? '<span class="status-yes">✔</span>' : ""
+                    },
+                    { data: "buff", title: "Buff", defaultContent: "" }
+                ]
+            });
+
+            // Renderowanie mapy jako płaska siatka 2D (kartka w kratkę)
+            const canvas = document.getElementById("isoMap");
+            const ctx = canvas.getContext("2d");
+            const tooltip = document.getElementById("mapTooltip");
+
+            // Rozmiar pojedynczej kratki (teraz kwadratowej)
+            const TILE_SIZE = 16; 
+
+            // Dopasowanie rozmiaru płótna bezpośrednio do wymiarów siatki (szerokość x wysokość)
+            canvas.width = MAP_WIDTH * TILE_SIZE;
+            canvas.height = MAP_HEIGHT * TILE_SIZE;
+
+            function drawMap() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                for (let y = 0; y < MAP_HEIGHT; y++) {
+                    for (let x = 0; x < MAP_WIDTH; x++) {
+                        // Obliczanie lewego górnego rogu kwadratu
+                        const posX = x * TILE_SIZE;
+                        const posY = y * TILE_SIZE;
+
+                        // Rysowanie kwadratowej kratki
+                        ctx.beginPath();
+                        ctx.rect(posX, posY, TILE_SIZE, TILE_SIZE);
+                        ctx.closePath();
+
+                        const item = buildingGrid[y][x];
+                        if (item) {
+                            ctx.fillStyle = item.color;
+                            ctx.fill();
+                            if (!item.working) {
+                                ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
+                                ctx.lineWidth = 1.5;
+                                ctx.stroke();
+                            } else {
+                                ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                            }
+                        } else {
+                            // Tło pustej kratki
+                            ctx.fillStyle = "#3e5266";
+                            ctx.fill();
+                            ctx.strokeStyle = "#354657";
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            drawMap();
+
+            const $container = $(".map-container");
+            
+            canvas.addEventListener("mousemove", function(e) {
+                const rect = canvas.getBoundingClientRect();
+                
+                // Pobieranie pozycji myszy na płótnie
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                // Proste dzielenie pozycji przez rozmiar kratki, aby uzyskać indeksy
+                const cellX = Math.floor(mouseX / TILE_SIZE);
+                const cellY = Math.floor(mouseY / TILE_SIZE);
+
+                if (cellX >= 0 && cellX < MAP_WIDTH && cellY >= 0 && cellY < MAP_HEIGHT) {
+                    const item = buildingGrid[cellY][cellX];
+                    if (item) {
+                        const containerOffset = $container.offset();
+                        tooltip.style.left = (e.pageX - containerOffset.left + $container.scrollLeft() + 15) + "px";
+                        tooltip.style.top = (e.pageY - containerOffset.top + $container.scrollTop() + 15) + "px";
+                        
+                        tooltip.innerHTML = `
+                            <strong>${item.building}</strong><br/>
+                            Pozycja: ${item.grid}<br/>
+                            Poziom: ${item.level}<br/>
+                            Pracuje: ${item.working ? "Tak" : "Nie"}<br/>
+                            ${item.buff ? `Premia: ${item.buff}` : ""}
+                        `;
+                        tooltip.style.display = "block";
+                        return;
+                    }
+                }
+                tooltip.style.display = "none";
+            });
+
+            canvas.addEventListener("mouseleave", () => tooltip.style.display = "none");
+
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Cannot load data from API.");
+        });
+});
+</script>
+
+</body>

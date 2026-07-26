@@ -143,6 +143,9 @@ vite.config.ts.timestamp-*
 users/*
 !users/.gitkeep
 
+island/*
+!island/.gitkeep
+
 start.bat
 temp.txt
 
