@@ -82,6 +82,10 @@ app.get("/resources", (req, resp) => {
   resp.sendFile(path.join(__dirname + "/pages/resources.html"))
 });
 
+app.get("/compare", (req, resp) => {
+  resp.sendFile(path.join(__dirname + "/pages/compare.html"))
+});
+
 const getDateString = () => {
   const now = new Date();
   return formattedDate = now.toISOString()
@@ -164,6 +168,36 @@ app.get("/api/get-resource-list", (req, resp) => {
 
   resp.json(obj);
 })
+
+app.get("/api/users-buildings-summary", (req, resp) => {
+  let users = new Map()
+
+  fs.readdirSync("island/")
+    .filter(file => file.startsWith("buildings"))
+    .sort()
+    .reverse() 
+    .forEach(file => {
+
+      var obj = JSON.parse(fs.readFileSync("island/" + file, 'utf8'))
+      
+      if (users.get(obj.player) === undefined) {
+        let userBuildings = new Map()
+
+        obj.buildings.forEach(el => {
+          if (userBuildings.get(el.locName) === undefined) {
+            userBuildings.set(el.locName, 1)
+          } else {
+            userBuildings.set(el.locName, userBuildings.get(el.locName) + 1)
+          }
+          
+        })
+        users.set(obj.player, {'level': obj.level, 'datetime': obj.datetime, 'buildings': mapToObject(userBuildings)})
+      } 
+  })
+
+  resp.send(mapToObject(users))
+})
+
 
 var server = app.listen(port, function() {
   console.log("Settlers app started at port: " + port)

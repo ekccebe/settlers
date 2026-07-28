@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Angel Tool - Resources</title>
+<title>Angel Tool - Compare Players Buildings</title>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.css">
 
@@ -88,7 +88,7 @@ td.center {
 <script>
 $(document).ready(function () {
 
-    fetch("/api/get-resource-list")
+    fetch("/api/users-buildings-summary")
         .then(response => {
             if (!response.ok)
                 throw Error(response.statusText);
@@ -97,87 +97,81 @@ $(document).ready(function () {
         })
         .then(data => {
 
-            $("#player").text(data.player +' (' + data.level + ')');
-            $("#datetime").text(
-                data.datetime.replace("T", " ").substring(0, 19)
-            );
+            const players = Object.keys(data).sort();
 
-            const rows = [];
+            // lista wszystkich budynków
+            const allBuildings = new Set();
 
-            data.resources.forEach(resource => {
-
-                rows.push({
-                    name: resource.name,
-                    amount: resource.amount,
-                    maxLimit: resource.maxLimit,
-                    group: resource.group,
-                    isFull: resource.amount == resource.maxLimit
+            players.forEach(player => {
+                Object.keys(data[player].buildings).forEach(name => {
+                    allBuildings.add(name);
                 });
-
             });
 
-            $("#resources").DataTable({
+            // wiersze
+            const rows = [];
+
+            Array.from(allBuildings)
+                .sort()
+                .forEach(building => {
+
+                    const row = {
+                        building: building
+                    };
+
+                    players.forEach(player => {
+                        row[player] =
+                            data[player].buildings[building] ?? 0;
+                    });
+
+                    rows.push(row);
+                });
+
+            const columns = [
+                {
+                    data: "building",
+                    title: "Building"
+                }
+            ];
+
+            players.forEach(player => {
+                columns.push({
+                    data: player,
+                    title: `
+                        ${player} (${data[player].level})<br>
+                        <span style="font-size:11px;font-weight:normal;color:#777">
+                            ${data[player].datetime.substring(0, 10)}
+                        </span>
+                    `,
+                    className: "center"
+                });
+            });
+
+            $("#buildings").DataTable({
 
                 data: rows,
+
+                columns: columns,
+
+                paging: false,
 
                 autoWidth: false,
 
                 scrollX: true,
 
-                paging: false,
-
                 columnDefs: [
                     {
-                        targets: '_all',
-                        orderSequence: ['asc', 'desc']
+                        targets: "_all",
+                        orderSequence: ["asc", "desc"]
                     }
                 ],
 
                 layout: {
-                    topStart: 'search',
-                    topEnd: 'pageLength'
+                    topStart: "search",
+                    topEnd: null
                 },
 
-                order: [
-                    [1, "asc"],
-                    [2, "desc"]
-                ],
-
-                columns: [
-
-                    {
-                        data: "name",
-                        title: "Name"
-                    },
-
-                    {
-                        data: "amount",
-                        title: "Amount"
-                    },
-
-                    {
-                        data: "maxLimit",
-                        title: "Limit"
-                    },
-
-                    {
-                        data: "group",
-                        title: "Group"
-                    },
-
-                    {
-                        data: "isFull",
-                        title: "Full",
-                        className: "center",
-                        render: function (data) {
-                            return data
-                                ? '<span class="status-yes">⚠️</span>'
-                                : '';
-                        }
-                    }
-
-                ]
-
+                order: [[0, "asc"]]
             });
 
         })
@@ -200,14 +194,9 @@ $(document).ready(function () {
     <button onclick="window.location.href='/compare'">Compare Players</button>
 </div>
 
-<h2>Resources</h2>
+<h2>Compare Players Buildings</h2>
 
-<div class="info">
-    <div><b>Player:</b> <span id="player"></span></div>
-    <div><b>Snapshot:</b> <span id="datetime"></span></div>
-</div>
-
-<table id="resources" class="display"></table>
+<table id="buildings" class="display"></table>
 
 </body>
 </html>
