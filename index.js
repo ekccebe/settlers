@@ -86,6 +86,10 @@ app.get("/compare", (req, resp) => {
   resp.sendFile(path.join(__dirname + "/pages/compare.html"))
 });
 
+app.get("/guild_quest", (req, resp) => {
+  resp.sendFile(path.join(__dirname + "/pages/guild_quest.html"))
+});
+
 const getDateString = () => {
   const now = new Date();
   return formattedDate = now.toISOString()
@@ -126,6 +130,40 @@ app.get("/api/guild-user-summary", (req, resp) => {
           // overwrite if any file for a day has activity = true
           if (el.online24h === true) {
             userObj.set(datestr, {"online24h": el.online24h})
+          }
+        }
+      })
+    }
+  })
+
+  resp.send(mapToObject(users))
+})
+
+app.get("/api/guild-quest-user-summary", (req, resp) => {
+  let users = new Map()
+
+  fs.readdirSync("users/").forEach(file => {
+
+    if (file.startsWith("users")) {
+      var obj = JSON.parse(fs.readFileSync("users/" + file, 'utf8'))
+      
+      obj.forEach(el => {
+
+        if (el.gq !== undefined) {
+
+          if (users.get(el.id) === undefined) {
+            users.set(el.id, new Map())
+          }
+
+          let userObj = users.get(el.id)
+          let datestr = el.datetime.slice(0, 10);
+          if (userObj.get(datestr) === undefined) {
+            userObj.set(datestr, {"gq": el.gq})
+          } else {
+            // overwrite if any file for a day has gq = 3
+            if (el.gq === 3) {
+              userObj.set(datestr, {"gq": el.gq})
+            }
           }
         }
       })

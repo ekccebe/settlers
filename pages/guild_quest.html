@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Guild Quests</title>
+
+    <!-- DataTables -->
+    <link rel="stylesheet"
+          href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.css">
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .menu {
+            margin-bottom: 20px;
+        }
+
+        .menu button {
+            margin-right: 5px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+        }
+
+        #activity {
+            width: max-content !important;
+            min-width: 0 !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        #activity-wrapper {
+            overflow-x: auto;
+            text-align: left;
+        }
+
+        table.dataTable {
+            width: auto !important;
+        }
+
+        table.dataTable th,
+        table.dataTable td {
+            white-space: nowrap;
+            width: 1%;
+        }
+
+        .status-yes {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-no {
+            color: red;
+            font-weight: bold;
+        }
+
+        .date-month .date-day {
+            font-size: 10px;
+            line-height: 11px;
+        }
+
+
+
+        td.player {
+            text-align: left;
+            /*font-weight: bold;*/
+        }
+
+        .empty {
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="menu">
+    <button onclick="window.location.href='/'">Activity</button>
+    <button onclick="window.location.href='/guild_quest'">Guild Quests</button>
+    <button onclick="window.location.href='/buildings'">Building list</button>
+    <button onclick="window.location.href='/resources'">Player resources</button>
+    <button onclick="window.location.href='/compare'">Compare Players</button>
+</div>
+
+<h3>Guild members - Guild Quests</h3>
+
+<div id="activity-wrapper">
+    <table id="activity" class="display">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+
+const API_URL = '/api/guild-quest-user-summary';
+
+async function loadData() {
+
+    try {
+
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+            throw new Error('HTTP error: ' + response.status);
+        }
+
+        const data = await response.json();
+
+        const players = Object.keys(data);
+
+        // Collect all dates
+        const dates = new Set();
+
+        players.forEach(player => {
+
+            Object.keys(data[player]).forEach(date => {
+                dates.add(date);
+            });
+
+        });
+
+        // Sort dates newest -> oldest
+        const sortedDates = [...dates].sort().reverse();
+
+        // Build table header
+        const thead = document.querySelector('#activity thead');
+
+        const headerRow = document.createElement('tr');
+
+        const playerHeader = document.createElement('th');
+        playerHeader.textContent = 'Player';
+
+        headerRow.appendChild(playerHeader);
+
+        sortedDates.forEach(date => {
+
+            const th = document.createElement('th');
+
+            const parts = date.split('-');
+            const month = parts[1];
+            const day = parts[2];
+
+            th.innerHTML =
+                '<div class="date-day">' + day + '</div>' +
+                '<div class="date-month">' + month + '</div>';
+
+            headerRow.appendChild(th);
+
+        });
+
+        thead.appendChild(headerRow);
+
+        // Build table body
+        const tbody = document.querySelector('#activity tbody');
+
+        players.forEach(player => {
+
+            const tr = document.createElement('tr');
+
+            const playerCell = document.createElement('td');
+
+            playerCell.textContent = player;
+            playerCell.classList.add('player');
+
+            tr.appendChild(playerCell);
+
+            sortedDates.forEach(date => {
+
+                const td = document.createElement('td');
+
+                const dayData = data[player][date];
+
+                if (dayData && dayData.gq === 3) {
+
+                    td.textContent = '✔';
+                    td.classList.add('status-yes');
+
+                } else if (dayData && dayData.gq === 1) {
+
+                    td.textContent = '✖';
+                    td.classList.add('status-no');
+
+                } else {
+
+                    td.textContent = 'N';
+                    td.classList.add('empty');
+
+                }
+
+                tr.appendChild(td);
+
+            });
+
+            tbody.appendChild(tr);
+
+        });
+
+        // Initialize DataTables
+        new DataTable('#activity', {
+            paging: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            autoWidth: false,
+
+            order: [[0, 'asc']],
+
+            columnDefs: [
+                {
+                    targets: 0,
+                    type: 'string'
+                }
+            ]
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.querySelector('#activity-wrapper').innerHTML =
+            '<p>Unable to load guild quest data.</p>';
+
+    }
+
+}
+
+loadData();
+
+</script>
+
+</body>
+</html>

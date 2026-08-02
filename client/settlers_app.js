@@ -123,7 +123,19 @@ function SendUserListToAPI()
 {
   var guild = swmmo.application.mGameInterface.GetCurrentPlayerGuild();
   var guild_users = []
-  var datetime = new Date().toISOString()
+  var currentDate = new Date()
+  var datetime = currentDate.toISOString()
+
+
+  var TimeUtil = swmmo.getDefinitionByName("com.bluebyte.tso.util::TimeUtil")
+  var timestamp = TimeUtil.getServerTimeWithGuildQuestOffset()
+  var serverDate = new Date(timestamp)
+  var serverDateString = serverDate.toUTCString()
+
+  var gqDatesMatch = false
+  if (serverDate.fullYearUTC == currentDate.fullYearUTC &&
+      serverDate.monthUTC == currentDate.monthUTC &&
+      serverDate.dateUTC == currentDate.dateUTC) gqDatesMatch = true
 
   for(key in guild.members)
   {
@@ -131,7 +143,9 @@ function SendUserListToAPI()
     guild_users.push({ 
       "id": guild.members[key].username, 
       "online24h": online, 
-      "datetime": datetime 
+      "datetime": datetime,
+      "gq":  gqDatesMatch ? guild.members[key].questsStatus : null,
+      "gq_timestamp": gqDatesMatch ? serverDateString : null
     });
   }
 
